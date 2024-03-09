@@ -15,11 +15,12 @@ const apiClient = process.env.API_TOKEN!
       .with(rest())
   : undefined;
 
-const field: any = "Employees";
+const employees: any = "Employees";
+const clocks: any = "Employee_Clocks";
 
 export async function getEmployees() {
   return await apiClient?.request(
-    readItems(field, {
+    readItems(employees, {
       fields: [
         "id",
         "Employee_Username",
@@ -27,6 +28,14 @@ export async function getEmployees() {
         "employee_name",
         "employee_icon",
       ],
+    })
+  );
+}
+
+export async function getEmployeeClocks() {
+  return await apiClient?.request(
+    readItems(clocks, {
+      fields: ["id", "Clock_User", "Clock_In_Timestamp", "Clock_Out_Timestamp"],
     })
   );
 }

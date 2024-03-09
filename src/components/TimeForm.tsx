@@ -20,12 +20,20 @@ import { timeUpdate } from "@/lib/server"
 import { useEffect, useState } from "react"
 import { EmployeeDialog } from "./EmployeeDialog"
 
+
 interface IEmployees {
     id: string,
     employee_pin: string,
     Employee_Username: string,
     employee_icon: string,
     employee_name: string
+}
+
+interface ClockData {
+    id: string;
+    Clock_User: string;
+    Clock_In_Timestamp: string;
+    Clock_Out_Timestamp: string;
 }
 
 interface IData {
@@ -47,11 +55,15 @@ const formSchema = z.object({
 
 })
 
-export default function TimeForm({ data, url }: { data: IEmployees[], url: string }) {
+export default function TimeForm({ data, url, clocks }: { data: IEmployees[], url: string, clocks: ClockData[] }) {
 
     const [employ, setEmploy] = useState<IValues>()
 
-    // console.log(data);
+    const employees = data
+    const api = url
+    const clock = clocks
+
+
 
 
     //type safety, useForm is of generic function need to pass a type
@@ -133,7 +145,7 @@ export default function TimeForm({ data, url }: { data: IEmployees[], url: strin
                             <Separator />
 
                         </div>
-                        <EmployeeDialog />
+                        <EmployeeDialog data={employees} url={api} formValues={employ} />
                         {/* formValues={employ} data={data} url={url} */}
                         <div className="flex gap-5 ">
                             <Button type='submit' className="w-full">Time In</Button>
