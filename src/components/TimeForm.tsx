@@ -15,8 +15,28 @@ import {
 import { Input } from "@/components/ui/input"
 import Time from "./Time"
 import { Separator } from "./ui/separator"
-import { getEmployees } from '@/lib/directus'
+import { timeIn } from '@/lib/directus'
+import { timeUpdate } from "@/lib/server"
 import { useEffect, useState } from "react"
+import { EmployeeDialog } from "./EmployeeDialog"
+
+interface IEmployees {
+    id: string,
+    employee_pin: string,
+    Employee_Username: string,
+    employee_icon: string,
+    employee_name: string
+}
+
+interface IData {
+    data: IEmployees
+}
+
+interface IValues {
+    username: string,
+    pin: string
+}
+
 
 //form data is an object with fields
 const formSchema = z.object({
@@ -27,9 +47,12 @@ const formSchema = z.object({
 
 })
 
-export default function TimeForm() {
+export default function TimeForm({ data, url }: { data: IEmployees[], url: string }) {
 
-    const [employ, setEmploy] = useState()
+    const [employ, setEmploy] = useState<IValues>()
+
+    // console.log(data);
+
 
     //type safety, useForm is of generic function need to pass a type
     //map all fields and type to infer base on schema
@@ -40,84 +63,59 @@ export default function TimeForm() {
         defaultValues: {
             username: "",
             pin: "",
-
         }
     })
 
-    useEffect(() => {
-        async function gather() {
-            try {
-                const response = await fetch("https://zandatestcms.azurewebsites.net/items/Employees", {
-                    method: "GET",
-                    headers: {
-                        Authorization: "Bearer YQRwVAFUn-LlC_IOPoOkpVLeH75QBlyI",
-                    },
-                })
-                const result = await response.json()
-                setEmploy(result)
-            } catch (error) {
-                console.error(error);
-
-            }
-        }
-        gather()
-    }, [employ])
-
-    console.log(employ);
-
-
     async function onSubmit(values: z.infer<typeof formSchema>) {
-
-        const result = await getEmployees()
-        console.log(await result);
-
+        setEmploy(values)
     }
 
     return (
-        <main className='max-w-md mx-auto flex flex-col gap-5'>
+        <>
 
-            <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-semibold tracking-tight text-center">Time IN/OUT</h1>
-                <Time />
-            </div>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-2'>
+            <main className='max-w-[305px] w-full mx-auto flex flex-col gap-5'>
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-2xl font-semibold tracking-tight text-center">Time IN/OUT</h1>
+                    <Time />
+                </div>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className='flex flex-col gap-2'>
 
-                    <FormField control={form.control} name="username" render={({ field }) => {
-                        return <FormItem>
-
-
-                            {/* form control set the appropriate aria-label when there's an error message */}
-
-                            <FormControl>
-                                <Input
-                                    placeholder='Enter your username'
-                                    type='text'
-                                    {...field}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    }} />
-
-                    <FormField control={form.control} name="pin" render={({ field }) => {
-                        return <FormItem>
+                        <FormField control={form.control} name="username" render={({ field }) => {
+                            return <FormItem>
 
 
-                            {/* form control set the appropriate aria-label when there's an error message */}
+                                {/* form control set the appropriate aria-label when there's an error message */}
 
-                            <FormControl>
-                                <Input
-                                    placeholder='Enter your pin'
-                                    type='password'
-                                    {...field}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    }} />
+                                <FormControl>
+                                    <Input
+                                        placeholder='Enter your username'
+                                        type='text'
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        }} />
 
-                    {/* <FormField control={form.control} name="pinConfirm" render={({ field }) => {
+                        <FormField control={form.control} name="pin" render={({ field }) => {
+                            return <FormItem>
+
+
+                                {/* form control set the appropriate aria-label when there's an error message */}
+
+                                <FormControl>
+                                    <Input
+                                        placeholder='Enter your pin'
+                                        type='password'
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        }} />
+
+                        {/* <FormField control={form.control} name="pinConfirm" render={({ field }) => {
                         return <FormItem>
                             <FormControl>
                                 <Input
@@ -129,19 +127,22 @@ export default function TimeForm() {
                             <FormMessage />
                         </FormItem>
                     }} /> */}
-                    <div className="my-5 grid grid-cols-3 items-center" >
-                        <Separator />
-                        <p className="bg-background text-xs px-2 text-muted-foreground text-center uppercase col-span-">IN / OUT</p>
-                        <Separator />
+                        <div className="my-5 grid grid-cols-3 items-center" >
+                            <Separator />
+                            <p className="bg-background text-xs px-2 text-muted-foreground text-center uppercase col-span-">IN / OUT</p>
+                            <Separator />
 
-                    </div>
-                    <div className="flex gap-5 ">
-                        <Button type='submit' className="w-full">Time In</Button>
-                        <Button type='submit' variant={"outline"} className="w-full">Time Out</Button>
-                    </div>
+                        </div>
+                        <EmployeeDialog />
+                        {/* formValues={employ} data={data} url={url} */}
+                        <div className="flex gap-5 ">
+                            <Button type='submit' className="w-full">Time In</Button>
+                            <Button type='submit' variant={"outline"} className="w-full">Time Out</Button>
+                        </div>
 
-                </form>
-            </Form>
-        </main>
+                    </form>
+                </Form>
+            </main>
+        </>
     );
 }
