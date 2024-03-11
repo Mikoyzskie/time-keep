@@ -15,26 +15,11 @@ import {
 import { Input } from "@/components/ui/input"
 import Time from "./Time"
 import { Separator } from "./ui/separator"
-import { timeIn } from '@/lib/directus'
+import { verifyPin } from '@/lib/directus'
 import { timeUpdate } from "@/lib/server"
 import { useEffect, useState } from "react"
 import { EmployeeDialog } from "./EmployeeDialog"
-
-
-interface IEmployees {
-    id: string,
-    employee_pin: string,
-    Employee_Username: string,
-    employee_icon: string,
-    employee_name: string
-}
-
-interface ClockData {
-    id: string;
-    Clock_User: string;
-    Clock_In_Timestamp: string;
-    Clock_Out_Timestamp: string;
-}
+import { ClockData, IEmployees } from '@/app/types'
 
 interface IData {
     data: IEmployees
@@ -55,16 +40,21 @@ const formSchema = z.object({
 
 })
 
+//hashing
+const bcrypt = require("bcryptjs");
+const salt = bcrypt.genSaltSync(10);
+
+const secretKey = "zanda";
+const key = new TextEncoder().encode(secretKey);
+
 export default function TimeForm({ data, url, clocks }: { data: IEmployees[], url: string, clocks: ClockData[] }) {
 
     const [employ, setEmploy] = useState<IValues>()
+    const [userFound, setUserFound] = useState(true)
 
     const employees = data
     const api = url
     const clock = clocks
-
-
-
 
     //type safety, useForm is of generic function need to pass a type
     //map all fields and type to infer base on schema
@@ -78,7 +68,34 @@ export default function TimeForm({ data, url, clocks }: { data: IEmployees[], ur
         }
     })
 
+    const user = form.watch('username');
+    const pinChecks = form.watch('pin');
+    let filteredData
+
+    useEffect(() => {
+        function uservalidation() {
+            filteredData = data.filter(item => item.Employee_Username === user);
+            if (filteredData.length > 0) {
+                const pinHash = bcrypt.compareSync(pinChecks, filteredData[0].bcrypt);
+                if (pinHash) {
+                    setUserFound(false)
+                } else {
+                    setUserFound(true)
+                }
+            } else {
+                setUserFound(true)
+            }
+        }
+        uservalidation()
+    }, [user, pinChecks])
+
+    // const toHash = '1234'
+    // const hashed = bcrypt.hashSync(toHash, salt);
+    // console.log(hashed);
+
     async function onSubmit(values: z.infer<typeof formSchema>) {
+        form.reset()
+        setUserFound(true)
         setEmploy(values)
     }
 
@@ -139,18 +156,21 @@ export default function TimeForm({ data, url, clocks }: { data: IEmployees[], ur
                             <FormMessage />
                         </FormItem>
                     }} /> */}
+                        <p className="text-xs text-muted-foreground text-center mt-2 underline">New User</p>
                         <div className="my-5 grid grid-cols-3 items-center" >
                             <Separator />
                             <p className="bg-background text-xs px-2 text-muted-foreground text-center uppercase col-span-">IN / OUT</p>
                             <Separator />
 
                         </div>
-                        <EmployeeDialog data={employees} url={api} formValues={employ} />
+                        <EmployeeDialog data={employees} url={api} formValues={employ} clocks={clock}>
+                            <Button type="submit" disabled={userFound}>Time In/Out</Button>
+                        </EmployeeDialog>
                         {/* formValues={employ} data={data} url={url} */}
-                        <div className="flex gap-5 ">
+                        {/* <div className="flex gap-5 ">
                             <Button type='submit' className="w-full">Time In</Button>
                             <Button type='submit' variant={"outline"} className="w-full">Time Out</Button>
-                        </div>
+                        </div> */}
 
                     </form>
                 </Form>

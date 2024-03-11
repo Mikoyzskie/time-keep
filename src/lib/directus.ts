@@ -27,6 +27,8 @@ export async function getEmployees() {
         "employee_pin",
         "employee_name",
         "employee_icon",
+        "Clock_Status",
+        "bcrypt",
       ],
     })
   );
@@ -36,6 +38,7 @@ export async function getEmployeeClocks() {
   return await apiClient?.request(
     readItems(clocks, {
       fields: ["id", "Clock_User", "Clock_In_Timestamp", "Clock_Out_Timestamp"],
+      sort: ["-Clock_In_Timestamp"],
     })
   );
 }
@@ -46,4 +49,8 @@ export async function timeIn(id: string) {
       Clock_Status: true,
     })
   );
+}
+
+export async function verifyPin(form: string, hash: string) {
+  return apiClient?.request(verifyHash(form, hash));
 }

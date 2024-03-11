@@ -6,7 +6,10 @@ interface IEmployees {
   employee_pin: string,
   Employee_Username: string,
   employee_icon: string,
-  employee_name: string
+  employee_name: string,
+  Clock_Status: boolean,
+  bcrypt: string
+
 }
 interface ClockData {
   id: string;
@@ -27,7 +30,6 @@ export default async function page() {
   const clocks = recent!.map((clock: ClockData) => {
     return clock
   })
-
 
   return (
     <div className='flex items-center justify-center min-h-screen'>

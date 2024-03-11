@@ -1,3 +1,4 @@
+
 import {
     AlertDialog,
     AlertDialogAction,
@@ -15,29 +16,40 @@ import Image from 'next/image'
 import { RxAvatar } from "react-icons/rx";
 import { MdOutlineAccessTime, MdOutlineCalendarToday } from "react-icons/md";
 import { IoIosLogIn, IoIosLogOut } from "react-icons/io";
-import { getEmployeeClocks } from '@/lib/directus'
-
-
-interface IEmployees {
-    id: string,
-    employee_pin: string,
-    Employee_Username: string,
-    employee_icon: string,
-    employee_name: string
-}
-
+import { getEmployeeClocks, verifyPin } from '@/lib/directus'
+import { IEmployees, ClockData } from '@/app/types'
+import TimeInButton from "./TimeInButton";
 
 interface IValues {
     username: string,
     pin: string
 }
 
-export function EmployeeDialog({ data, formValues, url }: { data: IEmployees[], formValues: IValues | undefined, url: string }) {
+export function EmployeeDialog({
+    data,
+    formValues,
+    url,
+    children,
+    clocks
+}: {
+    children: React.ReactNode,
+    data: IEmployees[],
+    formValues: IValues | undefined,
+    url: string,
+    clocks: ClockData[]
+}) {
 
-    let filteredData
-    if (formValues !== undefined) {
-        filteredData = data.filter(item => item.Employee_Username === formValues?.username);
-    }
+    const filteredData = data.filter(item => item.Employee_Username === formValues?.username);
+    const userLogs = clocks.filter(item => item.Clock_User === filteredData[0]?.id)
+
+    // let userLogs
+    // if (formValues !== undefined && filteredData !== undefined && f) {
+    //     filteredData = data.filter(item => item.Employee_Username === formValues?.username);
+    //     userLogs = clocks.filter(item => item.Clock_User === filteredData[0]?.id)
+    // }
+
+    // console.log(userLogs);
+
 
     const currentDate = new Date();
 
@@ -60,102 +72,146 @@ export function EmployeeDialog({ data, formValues, url }: { data: IEmployees[], 
     const formattedNextDate = nextDate.toDateString();
     const formattedCurrentDate = currentDate.toDateString();
 
-    let isWorkingDay = false
+    let isWorkingDay = true
 
     const dayOfWeek = currentDate.getDay();
 
     if (dayOfWeek === 6 || dayOfWeek === 0) {
-        isWorkingDay = true
+        isWorkingDay = false
     }
+
+    let lastlogDate
+    let lastlogOut
+    if (userLogs.length > 0) {
+        lastlogDate = new Date(userLogs[0].Clock_In_Timestamp)
+        lastlogOut = new Date(userLogs[0].Clock_Out_Timestamp)
+    }
+
+    function time(data: Date | undefined) {
+        if (data) {
+            let hours = data.getHours();
+            const minutes = data.getMinutes();
+            const amOrPm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            const formattedTime = hours.toString().padStart(2, '0') + ':' +
+                minutes.toString().padStart(2, '0') + ':' +
+                amOrPm;
+            return formattedTime
+        }
+        return "--:-- --"
+
+    }
+
+
+    const formattedTimeIn = time(lastlogDate)
+    const formattedTimeOut = time(lastlogOut)
+
 
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button variant="outline">Show Dialog</Button>
+                {
+                    children
+                }
             </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Time IN today?</AlertDialogTitle>
-                </AlertDialogHeader>
+            {
+                filteredData.length > 0 &&
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
 
-                <div className="flex flex-col justify-center items-center gap-2 w-full">
-                    {
-                        filteredData !== undefined &&
-                        <div className="relative max-w-48 w-full mx-auto mb-2">
-                            <Image
-                                src={url + "/assets/" + filteredData[0].employee_icon}
-                                alt="avatar"
-                                width={200}
-                                height={200}
-                                className="rounded-full h-[100px] w-[100px] object-cover mx-auto"
-                            />
-                            <p className="absolute w-fit -bottom-4 inset-x-0 mx-auto bg-white border-2 flex gap-2 items-center px-2 py-1 rounded-xl">
-                                <RxAvatar size={20} />
-                                <span className="text-xs text-nowrap">{"G'day"}, {filteredData[0].employee_name}</span>
+                            <p>
+                                {
+                                    filteredData[0].Clock_Status ? 'Time Out now' : 'Time In today?'
+                                }
                             </p>
-                        </div>
-                    }
 
-                    {/* filteredData !== undefined && */}
-                    <div className="mt-4 grid grid-cols-3 text-center justify-between w-full items-center gap-2">
-                        <div className="p-2 rounded-[5px] border flex flex-col gap-2 h-full">
-                            <h2 className="font-semibold text-xs">Recent Activity</h2>
-                            <Separator />
-                            <div className="text-start">
-                                <div className="text-xs flex items-center gap-1"><MdOutlineCalendarToday /> <p>{formattedNextDate}</p></div>
-                                <div className="text-xs flex items-center gap-1"><IoIosLogIn /> TimeIn: </div>
-                                <div className="text-xs flex items-center gap-1"><IoIosLogOut /> Timeout: </div>
+
+                        </AlertDialogTitle>
+                    </AlertDialogHeader>
+
+                    <div className="flex flex-col justify-center items-center gap-2 w-full">
+                        {
+                            filteredData !== undefined &&
+                            <div className="relative max-w-48 w-full mx-auto mb-2">
+                                <Image
+                                    src={url + "/assets/" + filteredData[0].employee_icon}
+                                    alt="avatar"
+                                    width={200}
+                                    height={200}
+                                    className="rounded-full h-[100px] w-[100px] object-cover mx-auto"
+                                />
+                                <p className="absolute w-fit -bottom-4 inset-x-0 mx-auto bg-white border-2 flex gap-2 items-center px-2 py-1 rounded-xl">
+                                    <RxAvatar size={20} />
+                                    <span className="text-xs text-nowrap">{"G'day"}, {filteredData[0].employee_name}</span>
+                                </p>
                             </div>
-                        </div>
-                        <div className="p-2 rounded-[5px] border flex flex-col gap-2 h-full">
-                            <h2 className="font-semibold text-sm">{"Today's Shift"}</h2>
-                            <Separator />
-                            {
-                                isWorkingDay &&
-                                <>
-                                    <div className="text-start">
-                                        <div className="text-xs flex items-center gap-1"><MdOutlineCalendarToday />
-                                            <p>
-                                                {formattedCurrentDate}
-                                            </p>
-                                        </div>
-                                        <div className="text-xs flex items-center gap-1"><MdOutlineAccessTime /> <p>06:00 to 03:00, AWST UTC+8</p></div>
-                                    </div>
-                                    <div className="text-start">
+                        }
 
-                                        <div className="text-xs flex items-center gap-1"><IoIosLogIn /> TimeIn: </div>
-                                        <div className="text-xs flex items-center gap-1"><IoIosLogOut /> Timeout: </div>
-                                    </div>
-                                </>
-                            }
-                            {
-                                !isWorkingDay &&
+                        {/* filteredData !== undefined && */}
+                        <div className="mt-4 grid grid-cols-3 text-center justify-between w-full items-center gap-2">
+                            <div className="p-2 rounded-[5px] border flex flex-col gap-2 h-full">
+                                <h2 className="font-semibold text-xs">Recent Activity</h2>
+                                <Separator />
                                 <div className="text-start">
-                                    <p className="text-xs">
-                                        Are you sure you want to work today??
-                                    </p>
+                                    <div className="text-xs flex items-center gap-1"><MdOutlineCalendarToday /> <p>{lastlogDate ? lastlogDate.toDateString() : "-------"}</p></div>
+                                    <div className="text-xs flex items-center gap-1"><IoIosLogIn /> TimeIn: {userLogs ? formattedTimeIn : "--:-- --"}</div>
+                                    <div className="text-xs flex items-center gap-1"><IoIosLogOut /> Timeout: {userLogs ? formattedTimeOut : "--:-- --"}</div>
                                 </div>
-                            }
+                            </div>
+                            <div className="p-2 rounded-[5px] border flex flex-col gap-2 h-full">
+                                <h2 className="font-semibold text-sm">{"Today's Shift"}</h2>
+                                <Separator />
+                                {
+                                    isWorkingDay &&
+                                    <>
+                                        <div className="text-start">
+                                            <div className="text-xs flex items-center gap-1"><MdOutlineCalendarToday />
+                                                <p>
+                                                    {formattedCurrentDate}
+                                                </p>
+                                            </div>
+                                            <div className="text-xs flex items-center gap-1"><MdOutlineAccessTime /> <p>06:00 to 03:00, AWST UTC+8</p></div>
+                                        </div>
+                                        <div className="text-start">
+
+                                            <div className="text-xs flex items-center gap-1"><IoIosLogIn /> TimeIn: </div>
+                                            <div className="text-xs flex items-center gap-1"><IoIosLogOut /> Timeout: </div>
+                                        </div>
+                                    </>
+                                }
+                                {
+                                    !isWorkingDay &&
+                                    <div className="text-start">
+                                        <p className="text-xs">
+                                            Are you sure you want to work today??
+                                        </p>
+                                    </div>
+                                }
 
 
-                        </div>
-                        <div className="p-2 rounded-[5px] border flex flex-col gap-2 h-full">
-                            <h2 className="font-semibold text-xs">{"Next Shift"}</h2>
-                            <Separator />
-                            <div className="text-start">
-                                <div className="text-xs flex items-center gap-1"><MdOutlineCalendarToday /> <p>{formattedNextDate}</p></div>
-                                <div className="text-xs flex items-center gap-1"><MdOutlineAccessTime /> <p>06:00 to 03:00, AWST UTC+8</p></div>
+                            </div>
+                            <div className="p-2 rounded-[5px] border flex flex-col gap-2 h-full">
+                                <h2 className="font-semibold text-xs">{"Next Shift"}</h2>
+                                <Separator />
+                                <div className="text-start">
+                                    <div className="text-xs flex items-center gap-1"><MdOutlineCalendarToday /> <p>{formattedNextDate}</p></div>
+                                    <div className="text-xs flex items-center gap-1"><MdOutlineAccessTime /> <p>06:00 to 03:00, AWST UTC+8</p></div>
+                                </div>
                             </div>
                         </div>
+
                     </div>
 
-                </div>
-
-                <AlertDialogFooter className="sm:justify-center">
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
+                    <AlertDialogFooter className="sm:justify-center">
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <TimeInButton id={filteredData[0].id} />
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            }
         </AlertDialog>
     )
 }
